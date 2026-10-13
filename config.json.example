@@ -3,6 +3,7 @@
   "mask_5tt": "mask.nii.gz",
   "seed_mask": "",
   "algo": "prob",
+  "jobs": 1,
   "seeding_type": "npv",
   "nbr_seeds": 10,
   "step": 0.5,
