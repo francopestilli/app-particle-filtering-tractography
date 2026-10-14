@@ -47,8 +47,8 @@ def parse_args():
                     help="CPU cores (default: all available)")
     ap.add_argument("--algo",           default="prob",  choices=["prob", "det"])
     ap.add_argument("--seeding_type",   default="npv",   choices=["npv", "nt"])
-    ap.add_argument("--nbr_seeds",      type=int,   default=10)
-    ap.add_argument("--step",           type=float, default=0.5)
+    ap.add_argument("--nbr_seeds",      type=int,   default=50)
+    ap.add_argument("--step",           type=float, default=0.2)
     ap.add_argument("--theta",          type=float, default=20.0)
     ap.add_argument("--sfthres",        type=float, default=0.1)
     ap.add_argument("--sfthres_init",   type=float, default=0.5)
@@ -80,10 +80,13 @@ def merge_config(args):
 # ---------------------------------------------------------------------------
 
 def derive_maps(mask_5tt_data):
-    inc = np.clip(mask_5tt_data[..., 0] + mask_5tt_data[..., 1], 0.0, 1.0).astype(np.float64)
+    gm  = mask_5tt_data[..., 0] + mask_5tt_data[..., 1]
+    inc = np.clip(gm, 0.0, 1.0).astype(np.float64)
     exc = np.squeeze(mask_5tt_data[..., 3]).astype(np.float64)
     wm  = (mask_5tt_data[..., 2] > 0).astype(np.uint8)
-    return inc, exc, wm
+    # GM-WM interface: voxels with both WM and GM probability > 0
+    interface = ((mask_5tt_data[..., 2] > 0) & (gm > 0)).astype(np.uint8)
+    return inc, exc, wm, interface
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +163,8 @@ def main():
     print(f"  fodf       : {args.fodf}")
     print(f"  mask_5tt   : {args.mask_5tt}")
     print(f"  algo       : {args.algo}")
-    print(f"  seeds/vox  : {args.nbr_seeds}  type={args.seeding_type}")
+    seed_src = args.seed_mask if args.seed_mask else "GM-WM interface"
+    print(f"  seeds/vox  : {args.nbr_seeds}  type={args.seeding_type}  src={seed_src}")
     print(f"  step       : {args.step} mm   theta={args.theta}°")
     print(f"  length     : [{args.min_length}, {args.max_length}] mm")
     print(f"  particles  : {args.particles}")
@@ -180,7 +184,7 @@ def main():
 
     print("[2/5] Loading 5TT ...", flush=True)
     tt5_data = nib.load(args.mask_5tt).get_fdata(dtype=np.float32)
-    inc_map, exc_map, wm_bin = derive_maps(tt5_data)
+    inc_map, exc_map, wm_bin, interface_bin = derive_maps(tt5_data)
 
     # ------------------------------------------------------------------
     # [2] Build direction getter and stopping criterion ONCE
@@ -209,7 +213,7 @@ def main():
     if args.seed_mask:
         seed_vol = (nib.load(args.seed_mask).get_fdata(dtype=np.float32) > 0).astype(np.uint8)
     else:
-        seed_vol = wm_bin
+        seed_vol = interface_bin  # GM-WM interface seeding
 
     sc = ActStoppingCriterion(inc_map, exc_map)
 
