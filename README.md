@@ -1,5 +1,62 @@
 # app-particle-filtering-tractography
 
+<!-- brainlife-app:begin (generated from the App manifest; edit the manifest, not this block) -->
+
+> **Generates a whole-brain tractogram with particle filtering tractography (PFT, Girard et al. 2014) in DIPY from fODF spherical harmonics and a 5-tissue-type map, with probabilistic or deterministic tracking.**
+
+Builds include (cortical plus subcortical GM) and exclude (CSF) maps from the 5TT image and seeds in white matter (or a given seed mask), then tracks with DIPY ParticleFilteringTracking and an ACT stopping criterion, using the chosen step, angle, thresholds and particle settings, and saves a .tck file. The README describes scilpy in the scilus container, but main runs run_pft.py with DIPY in gamorosino/pft-dipy:1.0. fODFs are expected as SH order 8 in the descoteaux07 basis unless sh_basis says otherwise.
+
+| | |
+|---|---|
+| 📥 **Inputs** | `neuro/csd` · `neuro/mask` · `neuro/mask` (optional) |
+| 📤 **Outputs** | `neuro/track/tck` |
+| 🐳 **Container** | `gamorosino/pft-dipy:1.0` |
+| ⚙️ **Resources** | 8 CPUs · 32 GB memory · 4 h walltime |
+| 🔗 **Run it** | [doi.org/10.25663/brainlife.app.984](https://doi.org/10.25663/brainlife.app.984) |
+
+#### 📥 Inputs
+
+| Input | Datatype | Required | Description |
+|---|---|---|---|
+| `fodf` | `neuro/csd` | yes | Fibre orientation distribution (spherical harmonics) volume. SH basis must match sh_basis (descoteaux07 by default). |
+| `mask_5tt` | `neuro/mask` (5tt) | yes | 5-tissue-type probability map in the fODF space. Volume order: cortical GM, subcortical GM, WM, CSF, pathological tissue. |
+| `seed_mask` | `neuro/mask` | no | Optional seeding mask; white matter from the 5TT map is used if omitted. |
+
+#### 📤 Outputs
+
+| Output | Datatype | Description |
+|---|---|---|
+| `tractogram` | `neuro/track/tck` | Whole-brain tractogram produced by Particle Filtering Tractography. |
+
+<details>
+<summary><b>⚙️ Parameters</b> (16)</summary>
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `algo` | string | `prob` | Tracking algorithm: 'prob' (probabilistic) or 'det' (deterministic). |
+| `seeding_type` | string | `npv` | Seeding strategy: 'npv' (seeds per voxel) or 'nt' (total seeds). |
+| `nbr_seeds` | number | `10` | Number of seeds (per voxel when seeding_type=npv, total when seeding_type=nt). |
+| `step` | number | `0.5` | Step size in mm. |
+| `theta` | number | `20` | Maximum angle between consecutive steps (degrees). |
+| `sfthres` | number | `0.1` | Spherical function threshold for tractography. |
+| `sfthres_init` | number | `0.5` | Spherical function threshold for seeding initialization. |
+| `min_length` | number | `20` | Minimum streamline length in mm. |
+| `max_length` | number | `200` | Maximum streamline length in mm. |
+| `particles` | number | `15` | Number of PFT particles for back-tracking. |
+| `back_tracking` | number | `2` | Back-tracking steps when a streamline enters an excluded region. |
+| `forward_tracking` | number | `1` | Forward-tracking steps after PFT back-tracking. |
+| `compress` | boolean | `true` | Compress output streamlines to reduce file size. |
+| `compress_value` | number | `0.2` | Maximum compression error in mm (used when compress=true). |
+| `random_seed` | number | `0` | Random seed for reproducibility. |
+| `sh_basis` | string | `descoteaux07` | Spherical harmonics basis: 'descoteaux07' or 'tournier07'. |
+
+</details>
+
+📚 **References used by this App:**
+- Girard G, Whittingstall K, Deriche R, Descoteaux M. Towards quantitative connectivity analysis: reducing tractography biases. NeuroImage 98:266-278 (2014).
+
+<!-- brainlife-app:end -->
+
 Brainlife.io app for **Particle Filtering Tractography (PFT)** using
 [scilpy](https://github.com/scilus/scilpy)'s `scil_tracking_pft.py`, run
 inside the `scilus/scilus:1.6.0` Singularity container.
